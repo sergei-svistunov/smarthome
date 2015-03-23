@@ -1,4 +1,4 @@
-package controller
+package x10
 
 /*
 #include <termios.h>
@@ -37,18 +37,17 @@ void set_fd_opts(int fd) {
 import "C"
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
-
-	"fmt"
 )
 
 type Controller struct {
 	tty      *os.File
+	devices  []Device
 	ttyMutex sync.Mutex
 	finished bool
 	DoneChan chan bool
@@ -57,32 +56,57 @@ type Controller struct {
 func NewController(tty string) (*Controller, error) {
 	f, err := os.OpenFile(tty, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0666)
 	if err != nil {
-		return nil, err
 		fmt.Println("Controller create error")
+	} else {
+		fd := C.int(f.Fd())
+		if C.isatty(fd) != 1 {
+			f.Close()
+			fmt.Println("Controller create error")
+		} else {
+			C.set_fd_opts(fd)
+		}
 	}
 
-	fd := C.int(f.Fd())
-	if C.isatty(fd) != 1 {
-		f.Close()
-		return nil, errors.New("File is not a tty")
+	controller := &Controller{
+		DoneChan: make(chan bool),
+		tty:      f,
+		finished: false,
 	}
 
-	C.set_fd_opts(fd)
-
-	controller := new(Controller)
 	runtime.SetFinalizer(controller, func(c *Controller) {
 		fmt.Println("Controller destructor")
 		c.finished = true
 		c.tty.Close()
 	})
 
-	controller.DoneChan = make(chan bool)
-	controller.tty = f
-	controller.finished = false
-
-	go controller.recieveData()
+	if f != nil {
+		go controller.recieveData()
+	}
 
 	return controller, nil
+}
+
+func (c *Controller) AddDevice(device Device, caption string, address byte) {
+	c.devices = append(c.devices, device)
+	device.init(c, address, caption)
+}
+
+func (c *Controller) GetInfo() map[string]interface{} {
+	res := make(map[string]interface{})
+
+	devicesInfo := make([]interface{}, len(c.devices))
+	for i := 0; i < len(c.devices); i++ {
+		devInfo := c.devices[i].GetInfo()
+		devInfo["caption"] = c.devices[i].Caption()
+		devInfo["type"] = c.devices[i].Type()
+		devicesInfo[i] = devInfo
+	}
+
+	res["devices"] = devicesInfo
+
+	fmt.Printf("%+v", res)
+
+	return res
 }
 
 func (c *Controller) recieveData() {
@@ -111,12 +135,12 @@ func (c *Controller) recieveData() {
 		}
 
 		c.ttyMutex.Unlock()
-		
+
 		fmt.Println(buffer)
 
 		time.Sleep(500000000)
 	}
-	
+
 	c.DoneChan <- true
 }
 

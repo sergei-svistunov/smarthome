@@ -26,35 +26,10 @@ func NewWebserver(addr string, x10Controller *x10.Controller) (*Webserver, error
 
 	webserver.serveMux.Handle("/", http.FileServer(http.Dir("html")))
 
-	doneChan := make(chan bool)
-
+	wsDevices := NewWsDevices(x10Controller)
 	webserver.serveMux.Handle("/devices/", websocket.Handler(func(ws *websocket.Conn) {
-		message := x10Controller.GetInfo()
-		message["type"] = "devicesList"		
-		websocket.JSON.Send(ws, message)
-
-		for {
-			select {
-			case <-doneChan:
-				return
-
-			default:
-				var data interface{}
-				err := websocket.JSON.Receive(ws, &data)
-
-				if err == nil {
-					fmt.Printf("%+v\n", data)
-				} else {
-					fmt.Println(err)
-				}
-
-			}
-		}
+		wsDevices.AssignConnection(ws)
 	}))
-
-	//	webserver.serveMux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-	//		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-	//	})
 
 	go func() {
 		err := webserver.httpServer.ListenAndServe()

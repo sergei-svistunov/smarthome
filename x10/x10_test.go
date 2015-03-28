@@ -28,6 +28,15 @@ func TestStringToAddress(t *testing.T) {
 	_, err = StringToAddress("A125")
 	if err == nil {
 		t.Error("Invalid convert A125")
+	}	
+}
+
+func TestAddressToString(t *testing.T) {
+	if AddressToString(204) != "A1" {
+		t.Error("Invalid convert 204 to A1")
 	}
-	
+
+	if AddressToString(0) != "G7" {
+		t.Error("Invalid convert 0 to G7")
+	}
 }

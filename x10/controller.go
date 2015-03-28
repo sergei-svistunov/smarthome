@@ -38,6 +38,7 @@ import "C"
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	"os"
 	"runtime"
 	"sync"
@@ -97,6 +98,7 @@ func (c *Controller) GetInfo() map[string]interface{} {
 	devicesInfo := make([]interface{}, len(c.devices))
 	for i := 0; i < len(c.devices); i++ {
 		devInfo := c.devices[i].GetInfo()
+		devInfo["address"] = AddressToString(c.devices[i].Address())
 		devInfo["caption"] = c.devices[i].Caption()
 		devInfo["type"] = c.devices[i].Type()
 		devicesInfo[i] = devInfo
@@ -104,9 +106,54 @@ func (c *Controller) GetInfo() map[string]interface{} {
 
 	res["devices"] = devicesInfo
 
-	fmt.Printf("%+v", res)
-
 	return res
+}
+
+func (c *Controller) SendOn(addr string, repeats byte) bool {
+	c.ttyMutex.Lock()
+	defer c.ttyMutex.Unlock()
+	
+	return c.setAddr(addr, repeats) && c.sendCommand(addr, CMD_ON, repeats)
+}
+
+func (c *Controller) SendOff(addr string, repeats byte) bool {
+	c.ttyMutex.Lock()
+	defer c.ttyMutex.Unlock()
+	
+	return c.setAddr(addr, repeats) && c.sendCommand(addr, CMD_OFF, repeats)
+}
+
+func (c *Controller) setAddr(addr string, repeats byte) bool {
+	glog.Infof("Setting address %s", addr)
+
+	a, err := StringToAddress(addr)
+	if err != nil {
+		glog.Error(err)
+		return false
+	}
+
+	buf := []byte{getHeader(repeats, false, false), a}
+
+	return c.writeWithConfirm(buf)
+}
+
+func (c *Controller) sendCommand(home string, cmd byte, repeats byte) bool {
+	glog.Infof("Sending command %s to %s", CommandToString(cmd), home)
+
+	if len(home) < 1 {
+		glog.Error("Empty home")
+		return false
+	}
+
+	a, err := StringToAddress(string(home[0]) + "1")
+	if err != nil {
+		glog.Error(err)
+		return false
+	}
+
+	buf := []byte{getHeader(repeats, true, false), a | (cmd & 0x0F)}
+
+	return c.writeWithConfirm(buf)
 }
 
 func (c *Controller) recieveData() {
@@ -136,7 +183,7 @@ func (c *Controller) recieveData() {
 
 		c.ttyMutex.Unlock()
 
-		fmt.Println(buffer)
+		//		fmt.Println(buffer)
 
 		time.Sleep(500000000)
 	}
@@ -144,8 +191,69 @@ func (c *Controller) recieveData() {
 	c.DoneChan <- true
 }
 
-func (c *Controller) Test() {
-	fmt.Println("Controller test")
+func (c *Controller) writeWithConfirm(buf []byte) bool {
+	glog.Infof("Start writeWithConfirm %v", buf)
+	var crc byte = 0
+	for _, b := range buf {
+		crc += b
+	}
+
+	for try := 0; try < 3; try++ {
+		n, err := c.tty.Write(buf)
+		if n != len(buf) || err != nil {
+			glog.Errorf("  Cannot write data on try %d", try)
+			continue
+		}
+
+		checksumBuf := make([]byte, 1)
+		n, err = c.tty.Read(checksumBuf)
+		if n < 1 || err != nil {
+			glog.Errorf("  Cannot read checksum on try %d", try)
+			continue
+		}
+
+		if crc != checksumBuf[0] {
+			glog.Errorf("  Invalid checksum (%d <> %d) on try %d", crc, checksumBuf[0], try)
+			continue
+		}
+
+		zeroByteBuf := []byte{0}
+		n, err = c.tty.Write(zeroByteBuf)
+		if n < 1 || err != nil {
+			glog.Errorf("  Cannot write 0 on try %d", try)
+			continue
+		}
+
+		n, err = c.tty.Read(checksumBuf)
+		if n < 1 || err != nil {
+			glog.Errorf("  Cannot read confirm on try %d", try)
+			continue
+		}
+
+		if checksumBuf[0] != 0x55 {
+			glog.Errorf("  Invalid confirm (%x) on try %d", checksumBuf[0], try)
+			continue
+		}
+
+		glog.Infof("Done writeWithConfirm")
+		return true
+	}
+
+	return false
+}
+
+func getHeader(repeats byte, isFunction, isExtended bool) byte {
+	var res byte = (repeats << 3) | (1 << 2)
+
+	if isFunction {
+		res |= 1 << 1
+	}
+
+	if isExtended {
+		res |= 1
+	}
+
+	return res
 }
 
 func p_FD_SET(p *syscall.FdSet, i int) {

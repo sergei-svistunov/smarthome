@@ -1,0 +1,37 @@
+{
+    "X10": {
+        "controller": {
+            "tty": "/dev/ttyUSB0"
+        },
+        "devices": [
+            {
+                "caption": "Childroom's light",
+                "type": "MDTx07",
+                "address": "A1"
+            },
+            {
+                "caption": "Hall's light",
+                "type": "MDTx07",
+                "address": "A2"
+            },
+            {
+                "caption": "Kitchen's light",
+                "type": "MDTx07",
+                "address": "A3"
+            },
+            {
+                "caption": "Bedroom's light",
+                "type": "MDTx07",
+                "address": "A4"
+            }
+        ]
+    },
+
+    "webserver": {
+        "listen": "0.0.0.0:38080"
+    },
+
+    "torrent": {
+        "savePath": "/tmp"
+    }
+}

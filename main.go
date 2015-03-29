@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/golang/glog"
 	"github.com/sergei-svistunov/smarthome/webserver"
 	"github.com/sergei-svistunov/smarthome/x10"
@@ -58,12 +57,12 @@ func main() {
 			}
 		}
 	} else {
-		fmt.Println(x10ControllerErr)
+		glog.Error(x10ControllerErr)
 	}
 
 	webServer, webServerErr := webserver.NewWebserver(config.WebServer.Listen, x10_controller)
 	if webServerErr != nil {
-		fmt.Println(webServerErr)
+		glog.Error(x10ControllerErr)
 	}
 
 	if x10ControllerErr == nil {

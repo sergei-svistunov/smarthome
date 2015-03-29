@@ -37,7 +37,6 @@ void set_fd_opts(int fd) {
 import "C"
 
 import (
-	"fmt"
 	"github.com/golang/glog"
 	"os"
 	"runtime"
@@ -57,12 +56,12 @@ type Controller struct {
 func NewController(tty string) (*Controller, error) {
 	f, err := os.OpenFile(tty, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0666)
 	if err != nil {
-		fmt.Println("Controller create error")
+		glog.Errorf("Controller create error: %s", err)
 	} else {
 		fd := C.int(f.Fd())
 		if C.isatty(fd) != 1 {
 			f.Close()
-			fmt.Println("Controller create error")
+			glog.Errorf("Controller create error: %s", err)
 		} else {
 			C.set_fd_opts(fd)
 		}
@@ -75,7 +74,6 @@ func NewController(tty string) (*Controller, error) {
 	}
 
 	runtime.SetFinalizer(controller, func(c *Controller) {
-		fmt.Println("Controller destructor")
 		c.finished = true
 		c.tty.Close()
 	})
@@ -112,14 +110,14 @@ func (c *Controller) GetInfo() map[string]interface{} {
 func (c *Controller) SendOn(addr string, repeats byte) bool {
 	c.ttyMutex.Lock()
 	defer c.ttyMutex.Unlock()
-	
+
 	return c.setAddr(addr, repeats) && c.sendCommand(addr, CMD_ON, repeats)
 }
 
 func (c *Controller) SendOff(addr string, repeats byte) bool {
 	c.ttyMutex.Lock()
 	defer c.ttyMutex.Unlock()
-	
+
 	return c.setAddr(addr, repeats) && c.sendCommand(addr, CMD_OFF, repeats)
 }
 

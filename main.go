@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"os"
+
 	"github.com/golang/glog"
+
 	"github.com/sergei-svistunov/smarthome/webserver"
 	"github.com/sergei-svistunov/smarthome/x10"
-	"os"
 )
 
 func main() {
@@ -21,7 +23,8 @@ func main() {
 	var config struct {
 		X10 struct {
 			Controller struct {
-				TTY string
+				TTY     string
+				Repeats byte
 			}
 			Devices []struct {
 				Caption, Type, Address string
@@ -41,7 +44,7 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	x10_controller, x10ControllerErr := x10.NewController(config.X10.Controller.TTY)
+	x10_controller, x10ControllerErr := x10.NewController(config.X10.Controller.TTY, config.X10.Controller.Repeats)
 	if x10ControllerErr == nil {
 		for _, devConf := range config.X10.Devices {
 			addr, err := x10.StringToAddress(devConf.Address)

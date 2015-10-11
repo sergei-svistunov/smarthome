@@ -6,12 +6,13 @@ import (
 
 func TestStringToAddress(t *testing.T) {
 	a, err := StringToAddress("A1")
-	if err != nil || a != 204 {
+	t.Log(a)
+	if err != nil || a != 102 {
 		t.Error("Invalid convert A1")
 	}
 
 	a, err = StringToAddress("a1")
-	if err != nil || a != 204 {
+	if err != nil || a != 102 {
 		t.Error("Invalid convert a1")
 	}
 	
@@ -32,11 +33,11 @@ func TestStringToAddress(t *testing.T) {
 }
 
 func TestAddressToString(t *testing.T) {
-	if AddressToString(204) != "A1" {
-		t.Error("Invalid convert 204 to A1")
+	if AddressToString(102) != "A1" {
+		t.Error("Invalid convert 102 to A1")
 	}
 
-	if AddressToString(0) != "G7" {
-		t.Error("Invalid convert 0 to G7")
+	if AddressToString(0) != "M13" {
+		t.Error("Invalid convert 0 to M13")
 	}
 }

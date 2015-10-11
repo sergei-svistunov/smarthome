@@ -1,28 +1,29 @@
 {
     "X10": {
         "controller": {
-            "tty": "/dev/ttyUSB0"
+            "tty": "/dev/remserial1",
+            "repeats": 5
         },
         "devices": [
             {
                 "caption": "Childroom's light",
                 "type": "MDTx07",
-                "address": "A1"
+                "address": "D1"
             },
             {
                 "caption": "Hall's light",
                 "type": "MDTx07",
-                "address": "A2"
+                "address": "C1"
             },
             {
                 "caption": "Kitchen's light",
                 "type": "MDTx07",
-                "address": "A3"
+                "address": "B1"
             },
             {
                 "caption": "Bedroom's light",
                 "type": "MDTx07",
-                "address": "A4"
+                "address": "A1"
             }
         ]
     },
